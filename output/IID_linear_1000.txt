@@ -1,0 +1,13 @@
+Epoch [0/1000], Loss: 0.7125
+Epoch [100/1000], Loss: 0.2691
+Epoch [200/1000], Loss: 0.2249
+Epoch [300/1000], Loss: 0.2168
+Epoch [400/1000], Loss: 0.2148
+Epoch [500/1000], Loss: 0.2142
+Epoch [600/1000], Loss: 0.2140
+Epoch [700/1000], Loss: 0.2138
+Epoch [800/1000], Loss: 0.2137
+Epoch [900/1000], Loss: 0.2135
+Number of correct prediction using last feature of X: 183
+Correct and total ratio of the prediction: 189 200
+Accuracy on test data: 94.50%
