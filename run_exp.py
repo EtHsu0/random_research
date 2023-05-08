@@ -33,12 +33,21 @@ def main():
     parser.add_argument('-o', '--optim', choices=['ERM', 'worstLoss', 'groupDRO'], default="ERM")
     parser.add_argument('--distr', choices=['IID', 'OOD'], default='OOD')
     parser.add_argument('--DGP', choices=['anticasual', 'linear', 'plusminus', 'fortest', 'normal'], default='anticasual')
-    parser.add_argument('-n', '--num_samples', type=int, default=10000)
-    parser.add_argument('-d', '--dim', type=int, default=100)
-    parser.add_argument('-e', '--num_epochs', type=int, default=5000)
+    parser.add_argument('-n', '--num_samples', type=int, default=1000)
+    parser.add_argument('-d', '--dim', type=int, default=10)
+    parser.add_argument('-e', '--num_epochs', type=int, default=1000)
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.01)
     args = parser.parse_args()
+
+    device = (
+        "cuda"
+        if torch.cuda.is_available()
+        else "mps"
+        if torch.backends.mps.is_available()
+        else "cpu"
+    )
+    print(f"Using {device} device")
 
     if torch.cuda.is_available():
         torch.cuda.manual_seed(args.seed)
@@ -49,16 +58,12 @@ def main():
     d = args.dim
 
     if args.model == "Linear":
-        model = models.linearModel(d, 1)
+        model = models.linearModel(d, 1).to(device)
     elif args.model == "NeuralNet":
-        model = models.NeuralNetwork(d, 1)
-    # 
-    # if args.optim == "ERM":
+        model = models.NeuralNetwork(d, 1).to(device)
+    
     criterion = nn.BCELoss()
     optimizer = optim.SGD(model.parameters(), lr=args.learning_rate)
-    # elif args.optim == "worstLoss":
-        # criterion = nn.BCELoss()
-        # optimizer = optim.SGD(model.parameters(), lr=args.learning_rate)
 
     if args.distr == "IID":
         X_test,Y_test,Z_test = dgp.generate_DGP(n//5, d, rho, args.DGP)
@@ -71,10 +76,13 @@ def main():
 
     X,Y,Z = dgp.generate_DGP(n, d, rho, args.DGP)
 
-    X = torch.FloatTensor(X)
-    Y = torch.FloatTensor(Y).ravel()
+    X = torch.FloatTensor(X).to(device)
+    Y = torch.FloatTensor(Y).ravel().to(device)
     g1,g2,g3,g4 = split_group(X,Y,Z, d)
-    groups = [g1,g2,g3,g4]
+    groups = [torch.FloatTensor(g1).to(device),
+              torch.FloatTensor(g2).to(device),
+              torch.FloatTensor(g3).to(device),
+              torch.FloatTensor(g4).to(device)]
     labels = []
     for idx, g in enumerate(groups):
         groups[idx] = torch.FloatTensor(g)
@@ -82,7 +90,7 @@ def main():
             tensor = torch.zeros(len(groups[idx]))
         else:
             tensor = torch.ones(len(groups[idx]))
-        labels.append(tensor)
+        labels.append(tensor.to(device))
 
     losses = []
     epoches = []
