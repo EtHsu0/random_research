@@ -71,26 +71,25 @@ def main():
         X_test,Y_test,Z_test = dgp.generate_DGP(n//5, d, -rho, args.DGP)
     
 
-    X_test = torch.FloatTensor(X_test)
-    Y_test = torch.FloatTensor(Y_test).ravel()
+    X_test = torch.FloatTensor(X_test).to(device)
+    Y_test = torch.FloatTensor(Y_test).ravel().to(device)
 
     X,Y,Z = dgp.generate_DGP(n, d, rho, args.DGP)
 
     X = torch.FloatTensor(X).to(device)
     Y = torch.FloatTensor(Y).ravel().to(device)
-    g1,g2,g3,g4 = split_group(X,Y,Z, d)
-    groups = [torch.FloatTensor(g1).to(device),
-              torch.FloatTensor(g2).to(device),
-              torch.FloatTensor(g3).to(device),
-              torch.FloatTensor(g4).to(device)]
-    labels = []
-    for idx, g in enumerate(groups):
-        groups[idx] = torch.FloatTensor(g)
-        if (idx < 2):
-            tensor = torch.zeros(len(groups[idx]))
-        else:
-            tensor = torch.ones(len(groups[idx]))
-        labels.append(tensor.to(device))
+
+    if args.optim != "ERM":
+        g1,g2,g3,g4 = split_group(X,Y,Z, d)
+        groups = [g1,g2,g3,g4]
+        labels = []
+        for idx, g in enumerate(groups):
+            groups[idx] = torch.FloatTensor(g).to(device)
+            if (idx < 2):
+                tensor = torch.zeros(len(groups[idx]))
+            else:
+                tensor = torch.ones(len(groups[idx]))
+            labels.append(tensor.to(device))
 
     losses = []
     epoches = []
