@@ -1,0 +1,6 @@
+{
+    "workbench.editorAssociations": {
+        "*.ipynb": "jupyter-notebook.ipynb", // if commented, will open as JSON
+        // "*.ipynb": "default" //do not turn it on else will not open JupyterNB by default
+    }
+}
