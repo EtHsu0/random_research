@@ -2,12 +2,11 @@ import numpy as np
 import torch 
 import argparse
 import dgp
-import loss
 import models
 import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
-rho = 1
+
 
 def split_group(X, Y, Z, dim):
     g1 = np.empty((0, dim))
@@ -36,6 +35,7 @@ def main():
     parser.add_argument('-n', '--num_samples', type=int, default=1000)
     parser.add_argument('-d', '--dim', type=int, default=10)
     parser.add_argument('-e', '--num_epochs', type=int, default=1000)
+    parser.add_argument('-r', '--rho', type=float, default=1)
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.01)
     args = parser.parse_args()
@@ -56,7 +56,7 @@ def main():
 
     n = args.num_samples
     d = args.dim
-
+    rho = args.rho
     if args.model == "Linear":
         model = models.linearModel(d, 1).to(device)
     elif args.model == "NeuralNet":
@@ -94,14 +94,13 @@ def main():
     losses = []
     epoches = []
     losses_test = []
-
+    accuracies = []
     nq = 0.1
     # ntheta = 0.1
     q = np.ones(4) # Four weights
     q = q / np.sum(q)
-    theta = np.random.randn(100) #???
+
     for epoch in range(args.num_epochs):
-        #     # print(value.shape)
         if args.optim == "worstLoss":
             loss = None
             for idx, value in enumerate(groups):
@@ -121,8 +120,6 @@ def main():
 
             q[group_id] = q[group_id] * np.exp(group_loss.item() * nq)
             q = q / np.sum(q)
-            model.zero_grad()
-            optimizer.zero_grad()
             loss = group_loss * q[group_id]
             # group_loss.backward()
             # optimizer.step()
@@ -146,6 +143,7 @@ def main():
                 total = Y_test.size(0)
                 accuracy = correct / total
                 losses_test.append(loss_test)
+                accuracies.append(accuracy)
                 print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch + 1, args.num_epochs, loss.item()))
                 # print the accuracy
                 print('\tAccuracy on test data: {:.2f}%'.format(accuracy * 100))
@@ -155,8 +153,9 @@ def main():
     
     plt.plot(epoches, losses, label="train")
     plt.plot(epoches, losses_test, label="test")
+    # plt.plot(epoches, accuracies, label="test_accuracy")
     plt.legend()
-    plt.savefig(f'images/{args.model}_{args.optim}_{args.DGP}_{args.num_epochs}_{args.num_samples}_{args.dim}.png', bbox_inches='tight')
+    plt.savefig(f'images/{args.model}_{args.optim}_{args.DGP}_{args.num_epochs}_{args.num_samples}_{args.dim}_{args.rho}.png', bbox_inches='tight')
     plt.show()
 
     # with torch.no_grad():
