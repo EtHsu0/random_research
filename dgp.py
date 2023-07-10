@@ -13,8 +13,7 @@ def generate_DGP(n, d, rho, DGP):
         return generate_spurious_data(n, d, rho)
 
 
-
-beta_gen = lambda d : np.array([1]*(d//2 + 1) + [0]*(d//2 - 1)) # 1. what does this do?
+beta_gen = lambda d : np.array([1]*(d//2 + 1) + [0]*(d//2 - 1))
 sigmoid = lambda x :  1/(1 + np.exp(-x))
 
 def generate_spurious_data_anticausal(n, d, rho=0): 

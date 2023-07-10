@@ -38,6 +38,7 @@ def main():
     parser.add_argument('-r', '--rho', type=float, default=1)
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.01)
+    parser.add_argument('-p', '--plot', choices=['all', 'train/test'], default="train/test")
     args = parser.parse_args()
 
     device = (
@@ -57,11 +58,11 @@ def main():
     n = args.num_samples
     d = args.dim
     rho = args.rho
+
     if args.model == "Linear":
         model = models.linearModel(d, 1).to(device)
     elif args.model == "NeuralNet":
         model = models.NeuralNetwork(d, 1).to(device)
-    
     criterion = nn.BCELoss()
     optimizer = optim.SGD(model.parameters(), lr=args.learning_rate)
 
@@ -69,7 +70,6 @@ def main():
         X_test,Y_test,Z_test = dgp.generate_DGP(n//5, d, rho, args.DGP)
     elif args.distr == "OOD":
         X_test,Y_test,Z_test = dgp.generate_DGP(n//5, d, -rho, args.DGP)
-    
 
     X_test = torch.FloatTensor(X_test).to(device)
     Y_test = torch.FloatTensor(Y_test).ravel().to(device)
@@ -96,7 +96,6 @@ def main():
     losses_test = []
     accuracies = []
     nq = 0.1
-    # ntheta = 0.1
     q = np.ones(4) # Four weights
     q = q / np.sum(q)
 
@@ -113,23 +112,23 @@ def main():
         elif args.optim == "ERM":
             outputs = model(X)
             loss = criterion(outputs.squeeze(), Y)
-        else:
-            group_id = np.random.randint(4)
-            outputs = model(groups[group_id])
+        elif args.optim == "groupDRO":
+            group_id = np.random.randint(4) # Choose g at random
+            outputs = model(groups[group_id]) # Sample x y from the group g
             group_loss = criterion(outputs.squeeze(), labels[group_id])
 
             q[group_id] = q[group_id] * np.exp(group_loss.item() * nq)
             q = q / np.sum(q)
+
             loss = group_loss * q[group_id]
-            # group_loss.backward()
-            # optimizer.step()
+
 
         
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
     
-        if ((epoch + 1) % (args.num_epochs / 10) == 0) or epoch == 0:
+        if ((epoch + 1) % (args.num_epochs / 100) == 0) or epoch == 0:
             epoches.append(epoch)
             with torch.no_grad():
                 outputs = model(X)
@@ -144,18 +143,18 @@ def main():
                 accuracy = correct / total
                 losses_test.append(loss_test)
                 accuracies.append(accuracy)
-                print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch + 1, args.num_epochs, loss.item()))
-                # print the accuracy
+                print('Epoch [{}/{}]\n\tTrain_Loss: {:.4f}'.format(epoch + 1, args.num_epochs, loss.item()))
+                print('\tTest_Loss: {:.4f}'.format(loss_test.item()))
                 print('\tAccuracy on test data: {:.2f}%'.format(accuracy * 100))
-                print('\tLoss_test: {:.4f}'.format(loss_test.item()))
-                
-                
+                if args.optim == "groupDRO":
+                    print(q)
     
     plt.plot(epoches, losses, label="train")
     plt.plot(epoches, losses_test, label="test")
-    # plt.plot(epoches, accuracies, label="test_accuracy")
+    if args.plot == "all":
+        plt.plot(epoches, accuracies, label="test_accuracy")
     plt.legend()
-    plt.savefig(f'images/{args.model}_{args.optim}_{args.DGP}_{args.num_epochs}_{args.num_samples}_{args.dim}_{args.rho}.png', bbox_inches='tight')
+    plt.savefig(f'images/{args.optim}/[Model:{args.model}][Epoch:{args.num_epochs}][n:{args.num_samples}][d:{args.dim}][rho:{args.rho}].png', bbox_inches='tight')
     plt.show()
 
     # with torch.no_grad():
